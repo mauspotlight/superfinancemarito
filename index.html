@@ -10,6 +10,20 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-512.png">
 <link rel="manifest" href="manifest.webmanifest">
+<!-- Firebase: la nube de Google donde se guardan los datos de Mario -->
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
+<script>
+window.FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAZK-G-sSJ7bw7air5bDhuUVw5Y7_zxUCE",
+  authDomain: "superfinance-mario.firebaseapp.com",
+  projectId: "superfinance-mario",
+  storageBucket: "superfinance-mario.firebasestorage.app",
+  messagingSenderId: "469023014274",
+  appId: "1:469023014274:web:c67765f34f1fb090a2a39b"
+};
+window.FIREBASE_DOC = "mario";
+</script>
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>SuperFinance</title>
 <meta name="theme-color" content="#EDEFF2">
@@ -74,6 +88,12 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
 .icon-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:1px solid var(--line);color:var(--ink);flex:none}
 .icon-btn svg{width:21px;height:21px}
 @media (max-width:360px){.brand .logo{display:none}}
+.top-r{display:flex;align-items:center;gap:8px;min-width:0}
+.sync{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 11px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap;background:var(--good-soft);color:var(--good)}
+.sync i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.sync.off{background:var(--surface-2);color:var(--muted)}
+.sync.err{background:var(--bad-soft);color:var(--bad)}
+@media (max-width:400px){.sync .t{display:none}.sync{padding:0 10px}}
 
 /* saludo + mes */
 .hello h1{font-size:clamp(46px,14vw,64px);line-height:.9;font-stretch:72%;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
@@ -251,7 +271,7 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
       <span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M14.6 9.3c-.5-.8-1.5-1.3-2.6-1.3-1.5 0-2.6.8-2.6 1.9 0 2.6 5.3 1.4 5.3 4.1 0 1.1-1.2 2-2.7 2-1.2 0-2.2-.5-2.7-1.4M12 6.5V8m0 8v1.5"/></svg></span>
       <b>Super<em>Finance</em></b>
     </div>
-    <button class="icon-btn" id="themeBtn" aria-label="Cambiar tema claro u oscuro"></button>
+    <div class="top-r"><span class="sync" id="sync" role="status" hidden></span><button class="icon-btn" id="themeBtn" aria-label="Cambiar tema claro u oscuro"></button></div>
   </header>
 
   <section class="hello">
@@ -284,6 +304,7 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
 <script>
 (function(){
 const KEY='supergastos-mario-v1';
+let cloudRef=null,pendingRemote=null;
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const COLORS=['blue','red','teal','yellow','green','purple','orange','pink'];
@@ -322,6 +343,8 @@ const DEFAULT={
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
 if(!S||!S.fixed)S=JSON.parse(JSON.stringify(DEFAULT));
+function migrate(){
+  S.v=S.v||1;S.paid=S.paid||{};S.entries=S.entries||[];S.cats=S.cats||JSON.parse(JSON.stringify(DEFAULT.cats));
 /* actualización v2: Seguro Auto, Gastos Mamá, Seguro Mamá S/100, ingreso S/6,222 (conserva lo ya marcado) */
 if(!S.v||S.v<2){
   const has=id=>S.fixed.some(f=>f.id===id);
@@ -345,7 +368,9 @@ if(S.v<4){
   S.v=4;
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+}
+migrate();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}pushCloud()}
 
 const now=new Date();
 const pad=n=>String(n).padStart(2,'0');
@@ -592,7 +617,7 @@ function openSheet(html){
 }
 function closeSheet(){
   sheet.classList.remove('on');scrim.classList.remove('on');
-  setTimeout(()=>{sheet.hidden=true;scrim.hidden=true;sheet.innerHTML=''},280);
+  setTimeout(()=>{sheet.hidden=true;scrim.hidden=true;sheet.innerHTML='';applyPending()},280);
 }
 scrim.onclick=closeSheet;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)closeSheet()});
@@ -673,6 +698,59 @@ function openIncome(){
   sheet.querySelector('[data-close]').onclick=closeSheet;
   sheet.querySelector('#incSave').onclick=()=>{S.income=parseAmt(sheet.querySelector('#incIn').value);save();closeSheet();render();toast('✓ Ingreso actualizado')};
 }
+
+/* ===== Nube: Firebase (solo funciona en GitHub, cuando FIREBASE_CONFIG está completo) ===== */
+const syncEl=document.getElementById('sync');
+function setSync(cls,txt){if(!syncEl)return;syncEl.hidden=false;syncEl.className='sync'+(cls?' '+cls:'');syncEl.innerHTML='<i></i><span class="t">'+txt+'</span>';syncEl.title=txt}
+function pushCloud(){
+  if(!cloudRef)return;
+  setSync('off','Guardando…');
+  cloudRef.set(JSON.parse(JSON.stringify(S))).then(()=>setSync('','Guardado')).catch(e=>{console.error(e);setSync('err','No se guardó')});
+}
+function applyRemote(d){
+  if(!d||!d.fixed)return;
+  S=d;const before=S.v;migrate();
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+  render();
+  if(S.v!==before)pushCloud();
+}
+function applyPending(){if(pendingRemote){const d=pendingRemote;pendingRemote=null;applyRemote(d)}}
+function hasData(x){return x&&((x.entries&&x.entries.length)||Object.keys(x.paid||{}).some(k=>Object.keys(x.paid[k]||{}).length))}
+function mergeLocal(cloud,local){
+  cloud.entries=cloud.entries||[];cloud.paid=cloud.paid||{};
+  const ids=new Set(cloud.entries.map(e=>e.id));
+  (local.entries||[]).forEach(e=>{if(!ids.has(e.id))cloud.entries.push(e)});
+  Object.keys(local.paid||{}).forEach(k=>{cloud.paid[k]=Object.assign({},local.paid[k],cloud.paid[k]||{})});
+  return cloud;
+}
+(function initCloud(){
+  const cfg=window.FIREBASE_CONFIG;
+  if(!window.firebase||!cfg||!cfg.projectId||/PEGA/.test(cfg.projectId))return;
+  try{
+    const app=firebase.apps.length?firebase.app():firebase.initializeApp(cfg);
+    const db=firebase.firestore(app);
+    db.enablePersistence({synchronizeTabs:true}).catch(()=>{});
+    const ref=db.collection('finanzas').doc(window.FIREBASE_DOC||'mario');
+    let linked=false;try{linked=localStorage.getItem(KEY+'-cloud')==='1'}catch(e){}
+    const setLinked=()=>{linked=true;try{localStorage.setItem(KEY+'-cloud','1')}catch(e){}};
+    setSync('off','Conectando…');
+    ref.onSnapshot(snap=>{
+      if(snap.metadata.hasPendingWrites)return;
+      cloudRef=ref;
+      if(!snap.exists){
+        if(snap.metadata.fromCache){setSync('off','Sin conexión');return}
+        setLinked();pushCloud();return;
+      }
+      let d=snap.data();
+      if(!linked){
+        setLinked();
+        if(hasData(S)){applyRemote(mergeLocal(d,S));pushCloud();return}
+      }
+      if(!sheet.hidden)pendingRemote=d;else applyRemote(d);
+      setSync(snap.metadata.fromCache?'off':'',snap.metadata.fromCache?'Sin conexión':'Guardado');
+    },e=>{console.error(e);setSync('err','Sin acceso a la nube')});
+  }catch(e){console.error(e);setSync('err','Error de nube')}
+})();
 
 render();
 })();
