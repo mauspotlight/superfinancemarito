@@ -81,7 +81,12 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
 .month{display:flex;align-items:center;gap:8px;margin-top:12px}
 .month button{width:44px;height:44px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center}
 .month button svg{width:20px;height:20px}
-.month b{font-family:var(--display);font-weight:800;font-stretch:85%;font-size:22px;text-transform:uppercase;min-width:0;flex:1;text-align:center}
+.mlbl{flex:1;min-width:0;display:grid;justify-items:center;gap:4px;text-align:center}
+.month b{font-family:var(--display);font-weight:800;font-stretch:85%;font-size:22px;text-transform:uppercase}
+.bill{font-size:13.5px;line-height:1.3;color:var(--muted)}
+.bill b{font-family:var(--body);font-size:13.5px;font-stretch:100%;text-transform:none;font-weight:700;color:var(--ink)}
+.bill.none{font-style:italic}
+.month button:disabled{opacity:.35;cursor:default}
 .month .today-pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:3px;font-family:var(--body);text-transform:none}
 
 /* tarjeta principal */
@@ -254,7 +259,7 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
     <h1>Hola, <em>Mario</em></h1>
     <div class="month">
       <button id="prevM" aria-label="Mes anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <b id="monthLbl"></b>
+      <div class="mlbl"><b id="monthLbl"></b><span class="bill" id="billLbl"></span></div>
       <button id="nextM" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
   </section>
@@ -284,7 +289,7 @@ const MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','D
 const COLORS=['blue','red','teal','yellow','green','purple','orange','pink'];
 
 const DEFAULT={
-  v:3,
+  v:4,
   income:6222,
   fixed:[
     {id:'alquiler',name:'Alquiler',emoji:'🏠',amount:2275,color:'blue'},
@@ -306,7 +311,9 @@ const DEFAULT={
     {id:'sofi',name:'Sofi',emoji:'💛',color:'pink',budget:200},
     {id:'salud',name:'Salud',emoji:'💊',color:'red'},
     {id:'hogar',name:'Hogar',emoji:'🛋️',color:'purple'},
-    {id:'salidas',name:'Salidas',emoji:'🍽️',color:'orange'}
+    {id:'salidas',name:'Salidas',emoji:'🍽️',color:'orange'},
+    {id:'trabajo',name:'Trabajo',emoji:'💼',color:'blue'},
+    {id:'otros',name:'Otros',emoji:'📦',color:'teal'}
   ],
   paid:{},
   entries:[]
@@ -332,13 +339,37 @@ if(S.v<3){
   S.v=3;
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
 }
+/* actualización v4: categorías Trabajo y Otros */
+if(S.v<4){
+  ['trabajo','otros'].forEach(id=>{if(!S.cats.some(c=>c.id===id))S.cats.push(DEFAULT.cats.find(c=>c.id===id))});
+  S.v=4;
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
 const now=new Date();
 const pad=n=>String(n).padStart(2,'0');
 const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
-const curKey=now.getFullYear()+'-'+pad(now.getMonth()+1);
-let viewY=now.getFullYear(),viewM=now.getMonth();
+/* la app empieza en noviembre 2026 */
+const START_Y=2026,START_M=10,START_KEY='2026-11';
+/* fechas de facturación del banco: [consumos desde, consumos hasta, fecha de pago] */
+const BILL={
+  '2026-01':['25 dic','23 ene','lunes 23 de febrero'],
+  '2026-02':['24 ene','25 feb','lunes 23 de marzo'],
+  '2026-03':['26 feb','25 mar','martes 21 de abril'],
+  '2026-04':['26 mar','24 abr','miércoles 20 de mayo'],
+  '2026-05':['25 abr','25 may','lunes 22 de junio'],
+  '2026-06':['26 may','25 jun','martes 21 de julio'],
+  '2026-07':['26 jun','24 jul','jueves 20 de agosto'],
+  '2026-08':['25 jul','25 ago','martes 22 de setiembre'],
+  '2026-09':['26 ago','25 set','martes 20 de octubre'],
+  '2026-10':['26 set','23 oct','lunes 23 de noviembre'],
+  '2026-11':['24 oct','25 nov','martes 22 de diciembre'],
+  '2026-12':['26 nov','24 dic','miércoles 20 de enero']
+};
+const realKey=now.getFullYear()+'-'+pad(now.getMonth()+1);
+const curKey=realKey<START_KEY?START_KEY:realKey;
+let viewY=+curKey.slice(0,4),viewM=+curKey.slice(5)-1;
 let tab='fijos';
 try{tab=localStorage.getItem(KEY+'-tab')||'fijos'}catch(e){}
 const mKey=()=>viewY+'-'+pad(viewM+1);
@@ -374,6 +405,10 @@ let tT;function toast(m){const t=document.getElementById('toast');t.textContent=
 function renderTop(){
   const k=mKey();
   document.getElementById('monthLbl').innerHTML=MESES[viewM]+' '+viewY+(k===curKey?'<span class="today-pill">Este mes</span>':'');
+  const bl=document.getElementById('billLbl'),bd=BILL[k];
+  bl.className='bill'+(bd?'':' none');
+  bl.innerHTML=bd?`💳 Consumos del <b>${bd[0]}</b> al <b>${bd[1]}</b><br>Pago del banco: <b>${bd[2]}</b>`:'💳 Fechas del banco por cargar';
+  document.getElementById('prevM').disabled=k<=START_KEY;
   const inc=Number(S.income)||0,fx=fixedTotal(),vr=varSpent(k),left=inc-fx-vr;
   const base=Math.max(inc,fx+vr,1);
   const due=fx-fixedPaid(k);
@@ -487,7 +522,7 @@ function renderResumen(){
   const tot=fx+vr||1;
   // últimos 6 meses
   const months=[];
-  for(let i=5;i>=0;i--){const d=new Date(viewY,viewM-i,1);const kk=d.getFullYear()+'-'+pad(d.getMonth()+1);months.push({k:kk,m:MES3[d.getMonth()],v:fixedPaid(kk)+varSpent(kk)})}
+  for(let i=5;i>=0;i--){const d=new Date(viewY,viewM-i,1);const kk=d.getFullYear()+'-'+pad(d.getMonth()+1);if(kk<START_KEY)continue;months.push({k:kk,m:MES3[d.getMonth()],v:fixedPaid(kk)+varSpent(kk)})}
   const hmax=Math.max(...months.map(m=>m.v),1);
   return `
   <div class="sec-h"><h2>Resumen</h2></div>
@@ -504,8 +539,8 @@ function renderResumen(){
     </ul>
   </div>
   <div class="card">
-    <span class="eyebrow">Lo pagado en los últimos 6 meses</span>
-    <div class="hist">
+    <span class="eyebrow">Lo pagado mes a mes</span>
+    <div class="hist" style="grid-template-columns:repeat(${Math.max(months.length,3)},minmax(0,1fr))">
       ${months.map(m=>`<div class="col${m.k===k?' cur':''}"><span class="val">${m.v?fmt(Math.round(m.v)):'—'}</span><div class="track"><i style="height:${m.v/hmax*100}%"></i></div><span class="m">${m.m}</span></div>`).join('')}
     </div>
   </div>
@@ -521,7 +556,7 @@ function render(){
 }
 
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{tab=t.dataset.tab;confirmDel=null;try{localStorage.setItem(KEY+'-tab',tab)}catch(e){}render();window.scrollTo({top:document.getElementById('hero').offsetTop+document.getElementById('hero').offsetHeight-60,behavior:'smooth'})});
-document.getElementById('prevM').onclick=()=>{viewM--;if(viewM<0){viewM=11;viewY--}confirmDel=null;render()};
+document.getElementById('prevM').onclick=()=>{if(mKey()<=START_KEY)return;viewM--;if(viewM<0){viewM=11;viewY--}confirmDel=null;render()};
 document.getElementById('nextM').onclick=()=>{viewM++;if(viewM>11){viewM=0;viewY++}confirmDel=null;render()};
 
 document.getElementById('view').addEventListener('click',e=>{
@@ -530,7 +565,7 @@ document.getElementById('view').addEventListener('click',e=>{
     const id=b.dataset.pay,k=mKey(),p=paidMap(k),f=S.fixed.find(x=>x.id===id);
     if(p[id]){delete p[id];save();render();toast('Marcado como pendiente')}
     else{
-      const iso=k===curKey?todayISO():k+'-01';
+      const iso=k===realKey?todayISO():k<realKey?k+'-01':todayISO();
       p[id]={amount:Number(f.amount),date:iso};save();render();
       const el=document.querySelector('[data-fx="'+id+'"]');if(el){el.classList.add('bumped')}
       const all=S.fixed.every(x=>p[x.id]);
@@ -567,7 +602,7 @@ const parseAmt=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinit
 function openEntry(catId){
   let sel=catId||S.cats[0].id;
   const k=mKey();
-  const defDate=k===curKey?todayISO():k+'-01';
+  const defDate=k===realKey?todayISO():k+'-01';
   openSheet(`
     <div class="sh-head"><div><p class="eyebrow">Día a día</p><h2 id="shTitle">Anotar gasto</h2></div>${closeBtn}</div>
     <span class="lbl">¿En qué fue?</span>
@@ -578,7 +613,7 @@ function openEntry(catId){
     <label class="lbl" for="noteIn">Nota (opcional)</label>
     <input class="field" id="noteIn" placeholder="Ej. taxi a la clínica" autocomplete="off">
     <label class="lbl" for="dateIn">Fecha</label>
-    <input class="field" id="dateIn" type="date" value="${defDate}">
+    <input class="field" id="dateIn" type="date" min="2026-11-01" value="${defDate}">
     <div class="sh-actions"><button class="btn primary" id="saveEntry" disabled>${checkSvg}Guardar gasto</button></div>`);
   const amt=sheet.querySelector('#amtIn'),saveB=sheet.querySelector('#saveEntry');
   const sync=()=>{saveB.disabled=!(parseAmt(amt.value)>0)};
@@ -588,6 +623,7 @@ function openEntry(catId){
   saveB.onclick=()=>{
     const v=parseAmt(amt.value);if(!(v>0))return;
     const d=sheet.querySelector('#dateIn').value||defDate;
+    if(d<'2026-11-01'){toast('La app empieza el 1 de noviembre');return}
     S.entries.push({id:Date.now().toString(36),cat:sel,amount:Math.round(v*100)/100,note:sheet.querySelector('#noteIn').value.trim(),date:d});
     save();
     const dk=d.slice(0,7);if(dk!==mKey()){const [y,m]=dk.split('-').map(Number);viewY=y;viewM=m-1}
