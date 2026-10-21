@@ -282,16 +282,19 @@ const MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','D
 const COLORS=['blue','red','teal','yellow','green','purple','orange','pink'];
 
 const DEFAULT={
-  income:6000,
+  v:2,
+  income:6222,
   fixed:[
     {id:'alquiler',name:'Alquiler',emoji:'🏠',amount:2275,color:'blue'},
     {id:'seguro',name:'Seguro Médico',emoji:'🩺',amount:1560,color:'red'},
     {id:'agua',name:'Agua + Mantenimiento',emoji:'💧',amount:230,color:'teal'},
+    {id:'seguroauto',name:'Seguro Auto',emoji:'🚗',amount:110,color:'purple'},
     {id:'luz',name:'Luz',emoji:'💡',amount:100,color:'yellow'},
     {id:'regatas',name:'Regatas',emoji:'🚣',amount:287,color:'blue'},
     {id:'celular',name:'Celular',emoji:'📱',amount:31,color:'purple'},
     {id:'internet',name:'Internet + TV',emoji:'📺',amount:61,color:'orange'},
-    {id:'seguromama',name:'Seguro Mamá',emoji:'👵',amount:90,color:'pink'},
+    {id:'seguromama',name:'Seguro Mamá',emoji:'👵',amount:100,color:'pink'},
+    {id:'gastosmama',name:'Gastos Mamá',emoji:'💐',amount:400,color:'pink'},
     {id:'apple',name:'Apple',emoji:'🍎',amount:48,color:'red'},
     {id:'chatgpt',name:'ChatGPT',emoji:'🤖',amount:20,color:'green'}
   ],
@@ -310,6 +313,17 @@ const DEFAULT={
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
 if(!S||!S.fixed)S=JSON.parse(JSON.stringify(DEFAULT));
+/* actualización v2: Seguro Auto, Gastos Mamá, Seguro Mamá S/100, ingreso S/6,222 (conserva lo ya marcado) */
+if(!S.v||S.v<2){
+  const has=id=>S.fixed.some(f=>f.id===id);
+  const after=(id,item)=>{if(has(item.id))return;const i=S.fixed.findIndex(f=>f.id===id);S.fixed.splice(i<0?S.fixed.length:i+1,0,item)};
+  after('agua',DEFAULT.fixed.find(f=>f.id==='seguroauto'));
+  after('seguromama',DEFAULT.fixed.find(f=>f.id==='gastosmama'));
+  const sm=S.fixed.find(f=>f.id==='seguromama');if(sm&&Number(sm.amount)===90)sm.amount=100;
+  if(Number(S.income)===6000)S.income=6222;
+  S.v=2;
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 
 const now=new Date();
