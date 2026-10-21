@@ -157,6 +157,8 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
 .cat .v{font-family:var(--display);font-size:28px;font-weight:900;font-stretch:80%;line-height:1;font-variant-numeric:tabular-nums}
 .cat .v small{font-size:14px;color:var(--muted);font-weight:700;margin-right:3px}
 .cat .n{font-size:13.5px;color:var(--muted)}
+.cat .of{font-family:var(--body);font-size:14px;font-weight:700;color:var(--muted);margin-left:5px;font-stretch:100%}
+.bar.sm{height:8px;margin-top:-2px}
 .cat .plus{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
 .cat .plus svg{width:18px;height:18px}
 .moves{list-style:none;margin:0;padding:0 16px;border-radius:20px;background:var(--surface);border:1px solid var(--line)}
@@ -282,7 +284,7 @@ const MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','D
 const COLORS=['blue','red','teal','yellow','green','purple','orange','pink'];
 
 const DEFAULT={
-  v:2,
+  v:3,
   income:6222,
   fixed:[
     {id:'alquiler',name:'Alquiler',emoji:'🏠',amount:2275,color:'blue'},
@@ -299,9 +301,9 @@ const DEFAULT={
     {id:'chatgpt',name:'ChatGPT',emoji:'🤖',amount:20,color:'green'}
   ],
   cats:[
-    {id:'transporte',name:'Transporte',emoji:'🚕',color:'yellow'},
-    {id:'mercado',name:'Mercado',emoji:'🛒',color:'green'},
-    {id:'sofi',name:'Sofi',emoji:'💛',color:'pink'},
+    {id:'transporte',name:'Transporte',emoji:'🚕',color:'yellow',budget:250},
+    {id:'mercado',name:'Mercado',emoji:'🛒',color:'green',budget:500},
+    {id:'sofi',name:'Sofi',emoji:'💛',color:'pink',budget:200},
     {id:'salud',name:'Salud',emoji:'💊',color:'red'},
     {id:'hogar',name:'Hogar',emoji:'🛋️',color:'purple'},
     {id:'salidas',name:'Salidas',emoji:'🍽️',color:'orange'}
@@ -322,6 +324,12 @@ if(!S.v||S.v<2){
   const sm=S.fixed.find(f=>f.id==='seguromama');if(sm&&Number(sm.amount)===90)sm.amount=100;
   if(Number(S.income)===6000)S.income=6222;
   S.v=2;
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+}
+/* actualización v3: estimados de Mercado S/500, Sofi S/200, Transporte S/250 */
+if(S.v<3){
+  DEFAULT.cats.forEach(d=>{if(!d.budget)return;const c=S.cats.find(x=>x.id===d.id);if(c&&c.budget==null)c.budget=d.budget});
+  S.v=3;
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -450,8 +458,10 @@ function renderVariables(){
       <span class="plus" aria-hidden="true">${plusSvg}</span>
       <span class="coin" style="--c:${col(c.color)}">${esc(c.emoji)}</span>
       <span><span class="nm">${esc(c.name)}</span></span>
-      <span class="v"><small>S/</small>${fmt(v)}</span>
-      <span class="n">${cnt?cnt+(cnt===1?' gasto':' gastos'):'Sin gastos aún'}</span>
+      <span class="v"><small>S/</small>${fmt(v)}${c.budget?`<span class="of">de ${fmt(c.budget)}</span>`:''}</span>
+      ${c.budget?`<span class="bar sm" style="--c:${v>c.budget?'var(--bad)':v>c.budget*.8?'var(--p-orange)':col(c.color)}"><i style="width:${Math.min(v/c.budget,1)*100}%"></i></span>
+      <span class="n" style="${v>c.budget?'color:var(--bad);font-weight:700':''}">${v>c.budget?'Te pasaste '+money(v-c.budget):'Quedan '+money(c.budget-v)}</span>`
+      :`<span class="n">${cnt?cnt+(cnt===1?' gasto':' gastos'):'Sin gastos aún'}</span>`}
     </button>`}).join('')}
   </div>
   <div class="sec-h" style="margin-top:28px"><h2 style="font-size:26px">Últimos gastos</h2></div>
