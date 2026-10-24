@@ -101,15 +101,21 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
 .hello h1{font-size:clamp(46px,14vw,64px);line-height:.9;font-stretch:72%;font-weight:900;text-transform:uppercase;letter-spacing:-.01em}
 .hello h1 em{font-style:normal;color:var(--accent)}
 .month{display:flex;align-items:center;gap:8px;margin-top:12px}
-.month button{width:44px;height:44px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center}
-.month button svg{width:20px;height:20px}
+.month>button{flex:none;width:44px;height:44px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center}
+.month>button svg{width:20px;height:20px}
 .mlbl{flex:1;min-width:0;display:grid;justify-items:center;gap:4px;text-align:center}
 .month b{font-family:var(--display);font-weight:800;font-stretch:85%;font-size:22px;text-transform:uppercase}
 .bill{font-size:13.5px;line-height:1.3;color:var(--muted)}
 .bill b{font-family:var(--body);font-size:13.5px;font-stretch:100%;text-transform:none;font-weight:700;color:var(--ink)}
 .bill.none{font-style:italic}
-.month button:disabled{opacity:.35;cursor:default}
-.month .today-pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:3px;font-family:var(--body);text-transform:none}
+button.bill{display:block;margin:6px auto 0;max-width:100%;position:relative;font-family:var(--body);text-align:center;padding:5px 30px;border-radius:12px;border:1px dashed transparent;cursor:pointer}
+button.bill:hover,button.bill:focus-visible{background:var(--surface);border-color:var(--line)}
+/* el lápiz va al costado sin mover el texto, así las dos líneas quedan centradas */
+.bill .ed{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:22px;height:22px;color:var(--accent)}
+.bill .ed svg{width:15px;height:15px}
+.warn{font-size:14px;font-weight:600;padding:10px 12px;border-radius:14px;background:var(--bad-soft);color:var(--ink);margin-top:12px}
+.month>button:disabled{opacity:.35;cursor:default}
+.month .today-pill{white-space:nowrap;display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:3px;font-family:var(--body);text-transform:none}
 
 /* tarjeta principal */
 .hero{margin-top:16px;padding:18px;border-radius:24px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);display:grid;gap:14px}
@@ -175,6 +181,12 @@ h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
 .budget .top b{font-family:var(--display);font-size:40px;font-weight:900;font-stretch:75%;line-height:1;font-variant-numeric:tabular-nums}
 .budget .top b small{font-size:18px;color:var(--muted);font-weight:700}
 .budget .sub{font-size:15px;color:var(--muted)}
+.stack.spent{background:var(--surface-2);height:16px}
+.stack.spent.over{box-shadow:0 0 0 2px var(--bad)}
+.spent-leg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--muted)}
+.spent-leg span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.spent-leg i{width:10px;height:10px;border-radius:3px;flex:none}
+.spent-leg b{color:var(--ink);font-variant-numeric:tabular-nums}
 .bar{height:14px;border-radius:9px;background:var(--surface-2);overflow:hidden}
 .bar i{display:block;height:100%;border-radius:9px;background:var(--c,var(--accent));transition:width .4s ease}
 .cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
@@ -320,7 +332,7 @@ html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
       <span class="logo coinlogo" aria-hidden="true"><svg viewBox="0 0 100 100" role="img" aria-label="SuperFinance"><rect width="100" height="100" fill="#2A55F5"/><circle cx="50" cy="52.5" r="34" fill="#1B3BB8"/><circle cx="50" cy="50" r="34" fill="#E8AE00"/><circle cx="50" cy="50" r="27.9" fill="#FFC61A"/><circle cx="50" cy="50" r="25.2" fill="none" stroke="#E8AE00" stroke-width="0.9"/><text x="50" y="51" text-anchor="middle" dominant-baseline="central" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="40" fill="#9A6B00">$</text></svg></span>
       <b>Super<em>Finance</em></b>
     </div>
-    <div class="top-r"><span class="sync" id="sync" role="status" hidden></span><button class="icon-btn" id="themeBtn" aria-label="Cambiar tema claro u oscuro"></button></div>
+    <div class="top-r"><span class="sync" id="sync" role="status" hidden></span><button class="icon-btn" id="setBtn" aria-label="Ajustes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button><button class="icon-btn" id="themeBtn" aria-label="Cambiar tema claro u oscuro"></button></div>
   </header>
 
   <section class="hello">
@@ -328,9 +340,10 @@ html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
     <h1>Hola, <em>Mario</em></h1>
     <div class="month">
       <button id="prevM" aria-label="Mes anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
-      <div class="mlbl"><b id="monthLbl"></b><span class="bill" id="billLbl"></span></div>
+      <div class="mlbl"><b id="monthLbl"></b></div>
       <button id="nextM" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
     </div>
+    <button type="button" class="bill" id="billLbl" aria-label="Cambiar fechas del banco de este mes"></button>
   </section>
 
   <section class="hero" id="hero"></section>
@@ -394,7 +407,7 @@ let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
 if(!S||!S.fixed)S=JSON.parse(JSON.stringify(DEFAULT));
 function migrate(){
-  S.v=S.v||1;S.paid=S.paid||{};S.entries=S.entries||[];S.cats=S.cats||JSON.parse(JSON.stringify(DEFAULT.cats));
+  S.v=S.v||1;S.bill=S.bill||{};S.paid=S.paid||{};S.entries=S.entries||[];S.cats=S.cats||JSON.parse(JSON.stringify(DEFAULT.cats));
 /* actualización v2: Seguro Auto, Gastos Mamá, Seguro Mamá S/100, ingreso S/6,222 (conserva lo ya marcado) */
 if(!S.v||S.v<2){
   const has=id=>S.fixed.some(f=>f.id===id);
@@ -466,8 +479,10 @@ const cycleCache={};
 function cycleOf(k){
   if(cycleCache[k])return cycleCache[k];
   const y=+k.slice(0,4),m=+k.slice(5);let c;
-  const b=BILL[k];
-  if(b){
+  const o=(S.bill||{})[k],b=BILL[k];
+  if(o&&o.from&&o.to){
+    c={from:o.from,to:o.to};
+  }else if(b){
     const p=t=>{const [d,mm]=t.split(' ');return [+d,MES_N[mm]]};
     const [d1,m1]=p(b[0]),[d2]=p(b[1]);
     c={from:isoD(m1>m?y-1:y,m1,d1),to:isoD(y,m,d2)};
@@ -483,7 +498,19 @@ function keyOfDate(iso){
   for(let i=0;i<3;i++){const c=cycleOf(k);if(iso>c.to)k=keyShift(k,1);else if(iso<c.from)k=keyShift(k,-1);else break}
   return k;
 }
-const FIRST_DAY=cycleOf(START_KEY).from;
+const firstDay=()=>cycleOf(START_KEY).from;
+const DIAS=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const MESES_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','setiembre','octubre','noviembre','diciembre'];
+const longDate=iso=>{const t=new Date(iso+'T12:00');return DIAS[t.getDay()]+' '+t.getDate()+' de '+MESES_L[t.getMonth()]};
+const nextDay=iso=>{const t=new Date(iso+'T12:00');return isoD(t.getFullYear(),t.getMonth()+1,t.getDate()+1)};
+/* fecha de pago como fecha (para las fechas de 2026 que vienen escritas en texto) */
+function payOf(k){
+  const o=(S.bill||{})[k];if(o&&o.pay)return o.pay;
+  const b=BILL[k];if(!b)return '';
+  const d=+(b[2].match(/\d+/)||[0])[0],mm=MESES_L.findIndex(m=>b[2].includes(m))+1;if(!d||!mm)return '';
+  const y=+k.slice(0,4),m=+k.slice(5);return isoD(mm<m?y+1:y,mm,d);
+}
+const hasBill=k=>!!(((S.bill||{})[k]&&S.bill[k].to)||BILL[k]);
 function entriesOf(k){const c=cycleOf(k);return S.entries.filter(e=>e.date>=c.from&&e.date<=c.to)}
 function varSpent(k){return entriesOf(k).reduce((a,e)=>a+Number(e.amount),0)}
 function catSpent(k,id){return entriesOf(k).filter(e=>e.cat===id).reduce((a,e)=>a+Number(e.amount),0)}
@@ -505,9 +532,9 @@ let tT;function toast(m){const t=document.getElementById('toast');t.textContent=
 function renderTop(){
   const k=mKey();
   document.getElementById('monthLbl').innerHTML=MESES[viewM]+' '+viewY+(k===curKey?'<span class="today-pill">Este mes</span>':'');
-  const bl=document.getElementById('billLbl'),bd=BILL[k];
-  bl.className='bill'+(bd?'':' none');
-  bl.innerHTML=bd?`💳 Consumos del <b>${bd[0]}</b> al <b>${bd[1]}</b><br>Pago del banco: <b>${bd[2]}</b>`:'💳 Fechas del banco por cargar';
+  const bl=document.getElementById('billLbl'),cc=cycleOf(k),pay=payOf(k),pen='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>';
+  bl.className='bill'+(hasBill(k)?'':' none');
+  bl.innerHTML=hasBill(k)?`💳 Consumos del <b>${dayLbl(cc.from)}</b> al <b>${dayLbl(cc.to)}</b><br>Pago del banco: <b>${pay?longDate(pay):'por confirmar'}</b><span class="ed">${pen}</span>`:`💳 Fechas del banco por cargar<span class="ed">${pen}</span>`;
   document.getElementById('prevM').disabled=k<=START_KEY;
   const inc=Number(S.income)||0,fx=fixedTotal(),vr=varSpent(k),left=inc-fx-vr;
   const base=Math.max(inc,fx+vr,1);
@@ -574,7 +601,9 @@ function renderVariables(){
   const k=mKey();
   const avail=(Number(S.income)||0)-fixedTotal();
   const spent=varSpent(k),left=avail-spent;
-  const pct=avail>0?Math.min(spent/avail,1):1;
+  /* lo gastado por categoría, de mayor a menor, para la barra de colores */
+  const byCat=S.cats.map(c=>({name:c.name,emoji:c.emoji,color:c.color,v:catSpent(k,c.id)})).filter(c=>c.v>0).sort((a,b)=>b.v-a.v);
+  const base=Math.max(avail,spent,1);
   const ents=entriesOf(k).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
   const catOf=id=>S.cats.find(c=>c.id===id)||{name:'Otro',emoji:'•',color:'blue'};
   return `
@@ -582,10 +611,11 @@ function renderVariables(){
   <p class="hint">💳 Aquí cuentan los gastos del ${dayLbl(cycleOf(k).from)} al ${dayLbl(cycleOf(k).to)}. Lo que gastes después pasa al mes siguiente.</p>
   <button class="btn primary" id="addEntry">${plusSvg}Anotar un gasto</button>
   <div class="budget">
-    <div class="top"><span class="eyebrow">${left<0?'Te pasaste por':'Te queda para el día a día'}</span></div>
-    <div class="top"><b style="${left<0?'color:var(--bad)':''}"><small>S/ </small>${fmt(Math.abs(left))}</b><span class="sub">de ${money(avail)}</span></div>
-    <div class="bar" style="--c:${left<0?'var(--bad)':pct>.8?'var(--p-orange)':'var(--good)'}"><i style="width:${pct*100}%"></i></div>
-    <span class="sub">Llevas gastado <b style="color:var(--ink)">${money(spent)}</b> este mes</span>
+    <div class="top"><span class="eyebrow">Llevas gastado</span></div>
+    <div class="top"><b style="${left<0?'color:var(--bad)':''}"><small>S/ </small>${fmt(spent)}</b><span class="sub">de ${money(avail)}</span></div>
+    <div class="stack spent${left<0?' over':''}" role="img" aria-label="Gastado por categoría">${byCat.map(c=>`<i style="width:${c.v/base*100}%;background:${col(c.color)}" title="${esc(c.name)} ${money(c.v)}"></i>`).join('')}</div>
+    ${byCat.length?`<div class="spent-leg">${byCat.map(c=>`<span><i style="background:${col(c.color)}"></i>${esc(c.emoji)} ${esc(c.name)} <b>${money(c.v)}</b></span>`).join('')}</div>`:''}
+    <span class="sub">${left<0?`<b style="color:var(--bad)">Te pasaste por ${money(-left)}</b>`:`Te quedan <b style="color:var(--ink)">${money(left)}</b> para el día a día`}</span>
   </div>
   <div class="cat-h"><span class="eyebrow">${catEdit?'Toca una categoría para cambiarla':'Categorías'}</span><button class="link-btn${catEdit?' on':''}" id="editCats">${catEdit?'✓ Listo':'✏️ Editar'}</button></div>
   <div class="cats">
@@ -670,6 +700,7 @@ function renderResumen(){
 
 /* render general */
 function render(){
+  for(const x in cycleCache)delete cycleCache[x];
   renderTop();
   const v=document.getElementById('view');
   v.innerHTML=tab==='fijos'?renderFijos():tab==='variables'?renderVariables():renderResumen();
@@ -677,6 +708,59 @@ function render(){
 }
 
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{tab=t.dataset.tab;confirmDel=null;catEdit=false;try{localStorage.setItem(KEY+'-tab',tab)}catch(e){}render();window.scrollTo({top:document.getElementById('hero').offsetTop+document.getElementById('hero').offsetHeight-60,behavior:'smooth'})});
+/* ===== Ajustes: descargar el historial en Excel ===== */
+function loadScript(src){return new Promise((ok,ko)=>{if(window.XLSX)return ok();const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)})}
+function openSettings(){
+  openSheet(`
+    <div class="sh-head"><div><p class="eyebrow">SuperFinance</p><h2 id="shTitle">Ajustes</h2></div>${closeBtn}</div>
+    <span class="lbl">Historial</span>
+    <button class="btn primary" id="xlsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Descargar historial en Excel</button>
+    <p class="hint" style="margin-top:10px">Trae todos los gastos del día a día, los gastos fijos de cada mes y un resumen con lo que ahorraste.</p>
+    <span class="lbl">Tus datos</span>
+    <p class="hint" style="margin:0">${cloudRef?'☁️ Están guardados en la nube y se ven igual en cualquier celular o tablet con este link. Cambiar la app no los borra.':'Están guardados en este equipo.'}</p>`);
+  sheet.querySelector('[data-close]').onclick=closeSheet;
+  sheet.querySelector('#xlsBtn').onclick=async e=>{
+    const b=e.currentTarget;b.disabled=true;const old=b.innerHTML;b.innerHTML='Preparando…';
+    try{await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');exportExcel();toast('✓ Excel descargado')}
+    catch(err){console.error(err);toast('No se pudo descargar. Revisa tu internet.')}
+    b.disabled=false;b.innerHTML=old;
+  };
+}
+function exportExcel(){
+  const X=window.XLSX,inc=Number(S.income)||0;
+  const mLbl=kk=>MESES[+kk.slice(5)-1]+' '+kk.slice(0,4);
+  const catOf=id=>S.cats.find(c=>c.id===id)||{name:'Otros'};
+  const isoTxt=iso=>{const [y,m,d]=iso.split('-');return d+'/'+m+'/'+y};
+  // meses: desde noviembre 2026 hasta el mes actual o el último gasto anotado
+  const td=todayISO();let last=keyOfDate(td);
+  S.entries.forEach(e=>{const kk=keyOfDate(e.date);if(kk>last)last=kk});
+  if(last<START_KEY)last=START_KEY;
+  const months=[];for(let kk=START_KEY;kk<=last;kk=keyShift(kk,1))months.push(kk);
+  // hoja 1: día a día
+  const dia=S.entries.filter(e=>e.date>=firstDay()).sort((a,b)=>a.date.localeCompare(b.date)).map(e=>({'Fecha':isoTxt(e.date),'Mes':mLbl(keyOfDate(e.date)),'Categoría':catOf(e.cat).name,'Monto (S/)':Number(e.amount),'Nota':e.note||''}));
+  // hoja 2: gastos fijos por mes
+  const fijos=[];months.forEach(kk=>{const p=S.paid[kk]||{};S.fixed.forEach(f=>{const pd=p[f.id];fijos.push({'Mes':mLbl(kk),'Gasto':f.name,'Monto (S/)':pd?Number(pd.amount):Number(f.amount||0),'Estado':pd?'Pagado':'Pendiente','Fecha de pago':pd?isoTxt(pd.date):''})})});
+  // hoja 3: resumen por mes
+  const res=months.map(kk=>{const p=S.paid[kk]||{};const fx=S.fixed.reduce((a,f)=>a+(p[f.id]?Number(p[f.id].amount):Number(f.amount||0)),0),vr=varSpent(kk),c=cycleOf(kk);
+    return {'Mes':mLbl(kk),'Ingreso (S/)':inc,'Gastos fijos (S/)':fx,'Día a día (S/)':vr,'Ahorro (S/)':inc-fx-vr,'Estado':td>c.to?'Cerrado':'En curso'}});
+  // hoja 4: día a día por categoría y mes
+  const porCat=[];months.forEach(kk=>S.cats.forEach(c=>{const v=catSpent(kk,c.id);if(v>0)porCat.push({'Mes':mLbl(kk),'Categoría':c.name,'Gastado (S/)':v,'Estimado (S/)':c.budget||''})}));
+  const wb=X.utils.book_new();
+  const add=(rows,name,cols,head)=>{
+    const ws=rows.length?X.utils.json_to_sheet(rows):X.utils.aoa_to_sheet([head]);
+    ws['!cols']=cols.map(w=>({wch:w}));
+    const r=X.utils.decode_range(ws['!ref']);
+    for(let R=1;R<=r.e.r;R++)for(let C=0;C<=r.e.c;C++){const cell=ws[X.utils.encode_cell({r:R,c:C})];if(cell&&cell.t==='n')cell.z='#,##0.00'}
+    X.utils.book_append_sheet(wb,ws,name);
+  };
+  add(dia,'Día a día',[12,16,16,12,34],['Fecha','Mes','Categoría','Monto (S/)','Nota']);
+  add(fijos,'Gastos fijos',[16,24,12,11,14],['Mes','Gasto','Monto (S/)','Estado','Fecha de pago']);
+  add(res,'Resumen por mes',[16,13,17,15,13,10],['Mes','Ingreso (S/)','Gastos fijos (S/)','Día a día (S/)','Ahorro (S/)','Estado']);
+  add(porCat,'Por categoría',[16,18,14,14],['Mes','Categoría','Gastado (S/)','Estimado (S/)']);
+  X.writeFile(wb,'SuperFinance-Mario-'+td+'.xlsx');
+}
+document.getElementById('setBtn').onclick=openSettings;
+document.getElementById('billLbl').onclick=()=>openBill(mKey());
 document.getElementById('prevM').onclick=()=>{if(mKey()<=START_KEY)return;viewM--;if(viewM<0){viewM=11;viewY--}confirmDel=null;render()};
 document.getElementById('nextM').onclick=()=>{viewM++;if(viewM>11){viewM=0;viewY++}confirmDel=null;render()};
 
@@ -763,7 +847,7 @@ function openEntry(catId){
   const k=mKey();
   const c0=cycleOf(k),td=todayISO();
   const defDate=(td>=c0.from&&td<=c0.to)||td>c0.to?td:c0.from;
-  const dd=defDate<FIRST_DAY?FIRST_DAY:defDate;
+  const dd=defDate<firstDay()?firstDay():defDate;
   openSheet(`
     <div class="sh-head"><div><p class="eyebrow">Día a día</p><h2 id="shTitle">Anotar gasto</h2></div>${closeBtn}</div>
     <span class="lbl">¿En qué fue?</span>
@@ -773,20 +857,20 @@ function openEntry(catId){
     <label class="lbl" for="noteIn">Nota (opcional)</label>
     <input class="field" id="noteIn" placeholder="Ej. taxi a la clínica" autocomplete="off">
     <label class="lbl" for="dateIn">Fecha</label>
-    <input class="field" id="dateIn" type="date" min="${FIRST_DAY}" value="${dd}">
+    <input class="field" id="dateIn" type="date" min="${firstDay()}" value="${dd}">
     <p class="hint" id="cycHint" style="margin-top:8px"></p>
     <div class="sh-actions"><button class="btn primary" id="saveEntry" disabled>${checkSvg}Guardar gasto</button></div>`);
   const amt=sheet.querySelector('#amtIn'),saveB=sheet.querySelector('#saveEntry');
   const sync=()=>{saveB.disabled=!(parseAmt(amt.value)>0)};
   amt.oninput=sync;
   const dateIn=sheet.querySelector('#dateIn'),cycHint=sheet.querySelector('#cycHint');
-  const showCyc=()=>{const v=dateIn.value;if(!v||v<FIRST_DAY){cycHint.textContent='';return}const kk=keyOfDate(v);cycHint.innerHTML='💳 Este gasto cuenta para <b>'+MESES[+kk.slice(5)-1]+' '+kk.slice(0,4)+'</b>';};
+  const showCyc=()=>{const v=dateIn.value;if(!v||v<firstDay()){cycHint.textContent='';return}const kk=keyOfDate(v);cycHint.innerHTML='💳 Este gasto cuenta para <b>'+MESES[+kk.slice(5)-1]+' '+kk.slice(0,4)+'</b>';};
   dateIn.addEventListener('change',showCyc);dateIn.addEventListener('input',showCyc);showCyc();
   sheet.querySelector('#pick').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;sel=b.dataset.c;sheet.querySelectorAll('#pick button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.c===sel))};
   saveB.onclick=()=>{
     const v=parseAmt(amt.value);if(!(v>0))return;
     const d=sheet.querySelector('#dateIn').value||defDate;
-    if(d<FIRST_DAY){toast('La app empieza con los consumos del '+dayLbl(FIRST_DAY));return}
+    if(d<firstDay()){toast('La app empieza con los consumos del '+dayLbl(firstDay()));return}
     S.entries.push({id:Date.now().toString(36),cat:sel,amount:Math.round(v*100)/100,note:sheet.querySelector('#noteIn').value.trim(),date:d});
     save();
     const dk=keyOfDate(d);const moved=dk!==mKey();if(moved){const [y,m]=dk.split('-').map(Number);viewY=y;viewM=m-1}
@@ -872,6 +956,47 @@ function openCat(id){
   };
   draw();
 }
+/* cargar o cambiar a mano las fechas del banco de un mes */
+function openBill(k){
+  const c=cycleOf(k),o=(S.bill||{})[k],known=hasBill(k);
+  const prevTo=k>START_KEY||BILL[keyShift(k,-1)]||(S.bill||{})[keyShift(k,-1)]?cycleOf(keyShift(k,-1)).to:'';
+  const sug=prevTo?nextDay(prevTo):c.from;
+  const f0=known?c.from:sug,t0=known?c.to:'',p0=payOf(k);
+  const mName=MESES[+k.slice(5)-1]+' '+k.slice(0,4);
+  openSheet(`
+    <div class="sh-head"><div><p class="eyebrow">${mName}</p><h2 id="shTitle">Fechas del banco</h2></div>${closeBtn}</div>
+    <p class="hint" style="margin-top:8px">Cópialas de la tabla de facturación de tu tarjeta.</p>
+    <label class="lbl" for="bFrom">Consumos desde</label>
+    <input class="field" id="bFrom" type="date" value="${f0}">
+    <label class="lbl" for="bTo">Consumos hasta</label>
+    <input class="field" id="bTo" type="date" value="${t0}">
+    <label class="lbl" for="bPay">Fecha de pago</label>
+    <input class="field" id="bPay" type="date" value="${p0}">
+    <div id="bWarn"></div>
+    <div class="sh-actions">
+      <button class="btn primary" id="bSave">${checkSvg}Guardar fechas</button>
+      ${o?`<button class="btn ghost" id="bReset">${BILL[k]?'Volver a las fechas que venían cargadas':'Borrar estas fechas'}</button>`:''}
+    </div>`);
+  const q=x=>sheet.querySelector(x);
+  q('[data-close]').onclick=closeSheet;
+  const check=()=>{
+    const f=q('#bFrom').value,t=q('#bTo').value,msgs=[];
+    if(f&&t&&f>t)msgs.push('La fecha “desde” tiene que ser antes que la fecha “hasta”.');
+    if(f&&prevTo&&f!==nextDay(prevTo))msgs.push(`El mes anterior termina el ${dayLbl(prevTo)}. Lo normal es que este empiece el ${dayLbl(nextDay(prevTo))}, para que ningún gasto quede fuera.`);
+    const nk=keyShift(k,1);if(t&&hasBill(nk)&&cycleOf(nk).from!==nextDay(t))msgs.push(`El mes siguiente empieza el ${dayLbl(cycleOf(nk).from)}. Lo normal es que este termine el día antes.`);
+    q('#bWarn').innerHTML=msgs.map(m=>`<p class="warn">⚠️ ${m}</p>`).join('');
+    return !(f&&t&&f>t);
+  };
+  ['#bFrom','#bTo'].forEach(x=>{q(x).addEventListener('change',check);q(x).addEventListener('input',check)});check();
+  q('#bSave').onclick=()=>{
+    const f=q('#bFrom').value,t=q('#bTo').value,p=q('#bPay').value;
+    if(!f||!t){toast('Pon las fechas “desde” y “hasta”');return}
+    if(!check())return;
+    S.bill=S.bill||{};S.bill[k]={from:f,to:t,pay:p||''};
+    save();closeSheet();render();toast('✓ Fechas de '+MESES[+k.slice(5)-1]+' guardadas');
+  };
+  const r=q('#bReset');if(r)r.onclick=()=>{delete S.bill[k];save();closeSheet();render();toast('Listo');};
+}
 function openIncome(){
   openSheet(`
     <div class="sh-head"><div><p class="eyebrow">Resumen</p><h2 id="shTitle">Ingreso del mes</h2></div>${closeBtn}</div>
@@ -928,6 +1053,9 @@ function mergeLocal(cloud,local){
         setLinked();pushCloud();return;
       }
       let d=snap.data();
+      /* respaldo automático: una copia por día en Firebase (finanzas/mario/respaldos/AAAA-MM-DD) */
+      if(!snap.metadata.fromCache&&!window.__bk){window.__bk=1;const day=todayISO();let lb='';try{lb=localStorage.getItem(KEY+'-bk')}catch(e){}
+        if(lb!==day&&ref.collection){try{ref.collection('respaldos').doc(day).set(d).then(()=>{try{localStorage.setItem(KEY+'-bk',day)}catch(e){}}).catch(()=>{})}catch(e){}}}
       if(!linked){
         setLinked();
         if(hasData(S)){applyRemote(mergeLocal(d,S));pushCloud();return}
