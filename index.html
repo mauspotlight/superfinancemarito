@@ -298,7 +298,12 @@ input[type=date].field::-webkit-date-and-time-value{text-align:left;margin:0}
 .sheet *{max-width:100%}
 html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
 .two{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px}
-.two .field.emo{text-align:center;font-size:28px}
+.two .field.emo{text-align:center;font-size:28px;padding:0;cursor:pointer;display:grid;place-items:center}
+.two .field.emo[aria-expanded="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.emogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px;margin-top:10px;padding:10px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);max-height:244px;overflow-y:auto;overscroll-behavior:contain}
+.emogrid button{height:48px;border-radius:12px;font-size:26px;line-height:1;display:grid;place-items:center}
+.emogrid button[aria-pressed="true"]{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
+.emo-hint{font-size:13.5px;color:var(--muted);margin:6px 2px 0}
 .sh-actions{display:grid;gap:10px;margin-top:22px}
 .inline-confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px;border-radius:16px;background:var(--bad-soft);font-size:15px;font-weight:600}
 .inline-confirm span{flex:1;min-width:150px}
@@ -739,6 +744,16 @@ function closeSheet(){
   setTimeout(()=>{sheet.hidden=true;scrim.hidden=true;sheet.innerHTML='';fitSheet();applyPending()},280);
 }
 scrim.onclick=closeSheet;
+/* selector de íconos: se elige tocando, sin teclado */
+const EMOJIS=['🏠','🛒','🚕','🚗','⛽','🚌','✈️','💊','🩺','🏥','🦷','👓','💡','💧','🔥','📱','📺','💻','🌐','🎮','🎬','🎵','📚','🎓','💼','🏢','🧾','💳','🏦','💰','🎁','🎂','🍽️','☕','🍕','🍔','🍷','🍺','🍎','🛍️','👕','👟','💇','🧴','🧹','🛋️','🔧','🐶','🐱','🌱','⚽','🏋️','🏖️','🎉','⛪','❤️','💛','💐','👵','👶','🚣','🤖','📦','🏷️','📌'];
+function emoField(id,val){return `<button type="button" class="field emo" id="${id}" data-emobtn data-v="${esc(val)}" aria-label="Elegir ícono" aria-expanded="false">${esc(val)}</button>`}
+function emoGrid(id,val){return `<div class="emogrid" data-for="${id}" hidden>${EMOJIS.map(e=>`<button type="button" data-emo="${e}" aria-label="${e}" aria-pressed="${e===val}">${e}</button>`).join('')}</div>`}
+sheet.addEventListener('click',e=>{
+  const b=e.target.closest('[data-emobtn]');
+  if(b){const g=sheet.querySelector(`.emogrid[data-for="${b.id}"]`);g.hidden=!g.hidden;b.setAttribute('aria-expanded',String(!g.hidden));if(!g.hidden)setTimeout(()=>g.scrollIntoView({block:'nearest',behavior:'smooth'}),30);return}
+  const em=e.target.closest('[data-emo]');
+  if(em){const g=em.closest('.emogrid'),btn=sheet.querySelector('#'+g.dataset.for);btn.dataset.v=em.dataset.emo;btn.textContent=em.dataset.emo;g.querySelectorAll('[data-emo]').forEach(x=>x.setAttribute('aria-pressed',String(x===em)));g.hidden=true;btn.setAttribute('aria-expanded','false')}
+});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)closeSheet()});
 const closeBtn='<button class="icon-btn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
 const parseAmt=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:0};
@@ -788,7 +803,8 @@ function openFixed(id){
     openSheetInner(`
     <div class="sh-head"><div><p class="eyebrow">Gasto fijo</p><h2 id="shTitle">${id?'Cambiar '+esc(f.name):'Nuevo gasto fijo'}</h2></div>${closeBtn}</div>
     <label class="lbl" for="fxName">Nombre e ícono</label>
-    <div class="two"><input class="field emo" id="fxEmo" value="${esc(f.emoji)}" aria-label="Ícono (emoji)" maxlength="4"><input class="field" id="fxName" value="${esc(f.name)}" placeholder="Ej. Gimnasio"></div>
+    <div class="two">${emoField('fxEmo',f.emoji)}<input class="field" id="fxName" value="${esc(f.name)}" placeholder="Ej. Gimnasio"></div>${emoGrid('fxEmo',f.emoji)}
+    <p class="emo-hint">Toca el ícono para cambiarlo.</p>
     <label class="lbl" for="fxAmt">Monto mensual</label>
     <div class="money"><span>S/</span><input id="fxAmt" inputmode="decimal" value="${f.amount}" placeholder="0" autocomplete="off"></div>
     ${id?'<p class="hint" style="margin-top:10px">El nuevo monto se usa desde ahora. Lo ya pagado no cambia.</p>':''}
@@ -798,7 +814,7 @@ function openFixed(id){
     </div>`);
     sheet.querySelector('[data-close]').onclick=closeSheet;
     sheet.querySelector('#fxSave').onclick=()=>{
-      const name=sheet.querySelector('#fxName').value.trim(),amount=parseAmt(sheet.querySelector('#fxAmt').value),emoji=sheet.querySelector('#fxEmo').value.trim()||'📌';
+      const name=sheet.querySelector('#fxName').value.trim(),amount=parseAmt(sheet.querySelector('#fxAmt').value),emoji=sheet.querySelector('#fxEmo').dataset.v||'📌';
       if(!name){sheet.querySelector('#fxName').focus();toast('Escribe un nombre');return}
       if(id){Object.assign(f,{name,amount,emoji})}
       else S.fixed.push({id:'f'+Date.now().toString(36),name,emoji,amount,color:f.color});
@@ -818,16 +834,18 @@ function openCat(id){
   const d={name:c?c.name:'',emoji:c?c.emoji:'🏷️',budget:c&&c.budget?c.budget:'',color:c?c.color:COLORS[S.cats.length%COLORS.length]};
   const nUsed=id?S.entries.filter(e=>e.cat===id).length:0;
   let askDel=false;
-  const keep=()=>{const q=x=>sheet.querySelector(x);if(!q('#catName'))return;d.name=q('#catName').value;d.emoji=q('#catEmo').value;d.budget=q('#catBud').value};
+  const keep=()=>{const q=x=>sheet.querySelector(x);if(!q('#catName'))return;d.name=q('#catName').value;d.emoji=q('#catEmo').dataset.v;d.budget=q('#catBud').value};
   const draw=()=>{
     openSheetInner(`
     <div class="sh-head"><div><p class="eyebrow">Día a día</p><h2 id="shTitle">${id?'Editar categoría':'Nueva categoría'}</h2></div>${closeBtn}</div>
     <label class="lbl" for="catName">Nombre e ícono</label>
-    <div class="two"><input class="field emo" id="catEmo" value="${esc(d.emoji)}" aria-label="Ícono (emoji)" maxlength="4" autocomplete="off"><input class="field" id="catName" value="${esc(d.name)}" placeholder="Ej. Mascotas" autocomplete="off"></div>
+    <div class="two">${emoField('catEmo',d.emoji)}<input class="field" id="catName" value="${esc(d.name)}" placeholder="Ej. Mascotas" autocomplete="off"></div>${emoGrid('catEmo',d.emoji)}
+    <p class="emo-hint">Toca el ícono para elegir otro.</p>
     <span class="lbl">Color</span>
     <div class="colors" id="catColors">${COLORS.map(k=>`<button data-col="${k}" style="--c:${col(k)}" aria-pressed="${k===d.color}" aria-label="Color ${k}"></button>`).join('')}</div>
     <label class="lbl" for="catBud">Estimado al mes (opcional)</label>
-    <div class="money"><span>S/</span><input id="catBud" inputmode="decimal" value="${d.budget}" placeholder="Sin estimado" autocomplete="off"></div>
+    <div class="money"><span>S/</span><input id="catBud" inputmode="decimal" value="${d.budget}" placeholder="0" autocomplete="off"></div>
+    <p class="emo-hint">Déjalo vacío si no quieres ponerle estimado.</p>
     <div class="sh-actions">
       <button class="btn primary" id="catSave">${checkSvg}${id?'Guardar':'Crear categoría'}</button>
       ${id&&S.cats.length>1?(askDel?`<div class="inline-confirm"><span>¿Borrar “${esc(d.name)}”?${nUsed&&id!=='otros'&&S.cats.some(x=>x.id==='otros')?' Sus '+nUsed+(nUsed===1?' gasto pasa':' gastos pasan')+' a “Otros”.':''}</span><button class="btn sm danger" id="catDelYes">Sí, borrar</button><button class="btn sm ghost" id="catDelNo">No</button></div>`:'<button class="btn danger" id="catDel">Borrar esta categoría</button>'):''}
