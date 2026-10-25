@@ -297,6 +297,16 @@ button.bill:hover,button.bill:focus-visible{background:var(--surface);border-col
 .pick button{--c:var(--p-blue);display:grid;justify-items:center;gap:4px;padding:10px 4px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface);font-weight:700;font-size:14px;min-width:0}
 .pick button .e{font-size:28px;line-height:1}
 .pick button[aria-pressed="true"]{border-color:var(--c);box-shadow:0 0 0 1px var(--c);background:color-mix(in srgb,var(--c) 12%,var(--surface))}
+.paym{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+@media (min-width:700px){.sheet .paym{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.fx .st .pm{display:inline-block;font-size:12px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--ink);margin-left:4px;vertical-align:1px}
+.fx.paid .st .pm{background:var(--surface)}
+.paym button{--c:var(--p-blue);display:grid;justify-items:center;align-content:center;gap:2px;min-height:66px;padding:6px 2px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface);min-width:0}
+.paym .e{font-size:22px;line-height:1}
+.paym b{font-size:14.5px;line-height:1.1}
+.paym small{font-size:11px;color:var(--muted);font-weight:600;line-height:1}
+.paym button[aria-pressed="true"]{border-color:var(--c);box-shadow:0 0 0 1px var(--c);background:color-mix(in srgb,var(--c) 12%,var(--surface))}
+.moves .pm{display:inline-block;font-size:12px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--ink);margin-right:2px}
 .money{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:10px;height:76px;padding:0 16px;border-radius:18px;border:2px solid var(--accent);background:var(--surface)}
 .money span{font-family:var(--display);font-size:28px;font-weight:800;color:var(--muted);font-stretch:80%}
 .money input{width:100%;min-width:0;border:0;background:transparent;font-family:var(--display);font-weight:900;font-stretch:78%;font-size:44px;color:var(--ink);font-variant-numeric:tabular-nums;outline:none}
@@ -371,6 +381,18 @@ const offTxt=()=>navigator.onLine?'Conectando…':'Sin conexión';
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const COLORS=['blue','red','teal','yellow','green','purple','orange','pink'];
+/* métodos de pago */
+const PAYS=[
+  {id:'bcp',name:'BCP',sub:'Tarjeta',e:'💳',color:'blue'},
+  {id:'yape',name:'Yape',e:'📱',color:'purple'},
+  {id:'plin',name:'Plin',e:'📲',color:'teal'},
+  {id:'cash',name:'Cash',e:'💵',color:'green'},
+  {id:'ibk',name:'IBK',sub:'Tarjeta',e:'💳',color:'orange'},
+  {id:'transf',name:'Transf',long:'Transferencia',e:'🏦',color:'yellow'}
+];
+/* todo lo pagado en un mes con su método: gastos del día a día + fijos ya pagados */
+function payItems(kk){const p=S.paid[kk]||{};return [...entriesOf(kk),...S.fixed.filter(f=>p[f.id]).map(f=>({amount:Number(p[f.id].amount),pay:p[f.id].pay||f.pay}))]}
+function payOfEntry(e,long){const m=PAYS.find(x=>x.id===e.pay);if(!m)return '';if(long&&m.long)return m.long;return long&&m.sub?m.name+' ('+m.sub+')':m.name}
 
 const DEFAULT={
   v:4,
@@ -429,6 +451,12 @@ if(S.v<3){
 if(S.v<4){
   ['trabajo','otros'].forEach(id=>{if(!S.cats.some(c=>c.id===id))S.cats.push(DEFAULT.cats.find(c=>c.id===id))});
   S.v=4;
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+}
+/* actualización v5: todos los gastos fijos se pagan con tarjeta BCP (se puede cambiar en cada uno) */
+if(S.v<5){
+  S.fixed.forEach(f=>{if(!f.pay)f.pay='bcp'});
+  S.v=5;
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
 }
 }
@@ -582,7 +610,7 @@ function renderFijos(){
       <button class="body" data-edit="${f.id}" aria-label="Editar ${esc(f.name)}">
         <span class="nm">${esc(f.name)}</span>
         <span class="amt"><small>S/</small><b>${fmt(f.amount)}</b></span>
-        <span class="st">${pd?'✓ Pagado el '+dayLbl(pd.date):'Por pagar'}</span>
+        <span class="st">${pd?'✓ Pagado el '+dayLbl(pd.date):'Por pagar'}${payOfEntry({pay:(pd&&pd.pay)||f.pay})?`<span class="pm">${payOfEntry({pay:(pd&&pd.pay)||f.pay})}</span>`:''}</span>
       </button>
       <button class="check" data-pay="${f.id}" aria-pressed="${pd?'true':'false'}" aria-label="${pd?'Desmarcar':'Marcar como pagado'}: ${esc(f.name)}">${checkSvg}</button>
     </div>`}).join('')}
@@ -635,7 +663,7 @@ function renderVariables(){
   ${ents.length?`<ul class="moves">${ents.map(e=>{const c=catOf(e.cat);return `
     <li>
       <span class="coin sm" style="--c:${col(c.color)}" aria-hidden="true">${esc(c.emoji)}</span>
-      <div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="d">${dayLbl(e.date)}${e.note?' · '+esc(e.note):''}</div></div>
+      <div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="d">${payOfEntry(e)?`<span class="pm">${payOfEntry(e)}</span> `:''}${dayLbl(e.date)}${e.note?' · '+esc(e.note):''}</div></div>
       <div class="r"><b>${money(e.amount)}</b><button class="trash" data-del="${e.id}" aria-label="Borrar gasto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg></button></div>
       ${confirmDel===e.id?`<div class="confirm"><span>¿Borrar este gasto de ${money(e.amount)}?</span><button class="btn sm danger" data-delyes="${e.id}">Sí, borrar</button><button class="btn sm ghost" data-delno>No</button></div>`:''}
     </li>`}).join('')}</ul>`
@@ -674,6 +702,22 @@ function renderResumen(){
         :x.left<0?`<span class="pill down">Te pasaste ${money(-x.left)}</span>`:`<span class="pill now">Justo</span>`}</li>`).join('')}
     </ul>
   </div>`;
+  // por método de pago (solo gastos del día a día del mes)
+  const mEnts=payItems(k);
+  const pmSum=f=>{const xs=mEnts.filter(f);return {v:xs.reduce((a,e)=>a+Number(e.amount),0),n:xs.length}};
+  const pm=[...PAYS.map(m=>({...m,c:col(m.color),...pmSum(e=>e.pay===m.id)})),
+    {id:'',name:'Sin método',e:'•',c:'var(--muted)',...pmSum(e=>!PAYS.some(m=>m.id===e.pay))}].filter(x=>x.v>0).sort((a,b)=>b.v-a.v);
+  const pmTot=pm.reduce((a,x)=>a+x.v,0)||1,pmMax=Math.max(...pm.map(x=>x.v),1);
+  const payCard=`
+  <div class="card">
+    <span class="eyebrow">💳 Por método de pago</span>
+    <p class="hint" style="margin:6px 0 0">Gastos del día a día y fijos pagados de ${MESES[viewM]}</p>
+    ${pm.length?`
+    <div class="stack spent" style="margin-top:12px" role="img" aria-label="Gastado por método de pago">${pm.map(x=>`<i style="width:${x.v/pmTot*100}%;background:${x.c}"></i>`).join('')}</div>
+    <ul class="brk" style="margin-top:14px">
+      ${pm.map(x=>`<li><span class="coin sm" style="--c:${x.c}" aria-hidden="true">${x.e}</span><div style="min-width:0"><div class="t"><span>${x.name}${x.sub?` <small style="color:var(--muted);font-weight:600">${x.sub}</small>`:''}</span><b>${money(x.v)}</b></div><div class="bar" style="--c:${x.c}"><i style="width:${x.v/pmMax*100}%"></i></div><span class="p">${Math.round(x.v/pmTot*100)}% · ${x.n} ${x.n===1?'gasto':'gastos'}</span></div></li>`).join('')}
+    </ul>`:`<p class="sav-empty">Cuando anotes gastos este mes, aquí vas a ver con qué pagaste.</p>`}
+  </div>`;
   return `
   <div class="sec-h"><h2>Resumen</h2></div>
   <div class="kpis">
@@ -689,6 +733,7 @@ function renderResumen(){
       ${rows.map(r=>`<li><span class="coin sm" style="--c:${col(r.color)}" aria-hidden="true">${esc(r.emoji)}</span><div style="min-width:0"><div class="t"><span>${esc(r.name)}</span><b>${money(r.v)}</b></div><div class="bar" style="--c:${col(r.color)}"><i style="width:${r.v/max*100}%"></i></div><span class="p">${r.tag} · ${Math.round(r.v/tot*100)}% del gasto</span></div></li>`).join('')}
     </ul>
   </div>
+  ${payCard}
   <div class="card">
     <span class="eyebrow">Lo pagado mes a mes</span>
     <div class="hist" style="grid-template-columns:repeat(${Math.max(months.length,3)},minmax(0,1fr))">
@@ -737,26 +782,28 @@ function exportExcel(){
   if(last<START_KEY)last=START_KEY;
   const months=[];for(let kk=START_KEY;kk<=last;kk=keyShift(kk,1))months.push(kk);
   // hoja 1: día a día
-  const dia=S.entries.filter(e=>e.date>=firstDay()).sort((a,b)=>a.date.localeCompare(b.date)).map(e=>({'Fecha':isoTxt(e.date),'Mes':mLbl(keyOfDate(e.date)),'Categoría':catOf(e.cat).name,'Monto (S/)':Number(e.amount),'Nota':e.note||''}));
+  const dia=S.entries.filter(e=>e.date>=firstDay()).sort((a,b)=>a.date.localeCompare(b.date)).map(e=>({'Fecha':isoTxt(e.date),'Mes':mLbl(keyOfDate(e.date)),'Categoría':catOf(e.cat).name,'Monto (S/)':Number(e.amount),'Método de pago':payOfEntry(e,true),'Nota':e.note||''}));
   // hoja 2: gastos fijos por mes
-  const fijos=[];months.forEach(kk=>{const p=S.paid[kk]||{};S.fixed.forEach(f=>{const pd=p[f.id];fijos.push({'Mes':mLbl(kk),'Gasto':f.name,'Monto (S/)':pd?Number(pd.amount):Number(f.amount||0),'Estado':pd?'Pagado':'Pendiente','Fecha de pago':pd?isoTxt(pd.date):''})})});
+  const fijos=[];months.forEach(kk=>{const p=S.paid[kk]||{};S.fixed.forEach(f=>{const pd=p[f.id];fijos.push({'Mes':mLbl(kk),'Gasto':f.name,'Monto (S/)':pd?Number(pd.amount):Number(f.amount||0),'Estado':pd?'Pagado':'Pendiente','Fecha de pago':pd?isoTxt(pd.date):'','Método de pago':payOfEntry({pay:(pd&&pd.pay)||f.pay},true)})})});
   // hoja 3: resumen por mes
   const res=months.map(kk=>{const p=S.paid[kk]||{};const fx=S.fixed.reduce((a,f)=>a+(p[f.id]?Number(p[f.id].amount):Number(f.amount||0)),0),vr=varSpent(kk),c=cycleOf(kk);
     return {'Mes':mLbl(kk),'Ingreso (S/)':inc,'Gastos fijos (S/)':fx,'Día a día (S/)':vr,'Ahorro (S/)':inc-fx-vr,'Estado':td>c.to?'Cerrado':'En curso'}});
   // hoja 4: día a día por categoría y mes
+  const porPago=[];months.forEach(kk=>{const es=payItems(kk);[...PAYS.map(m=>({n:payOfEntry({pay:m.id},true),f:e=>e.pay===m.id})),{n:'Sin método',f:e=>!PAYS.some(m=>m.id===e.pay)}].forEach(m=>{const xs=es.filter(m.f);if(xs.length)porPago.push({'Mes':mLbl(kk),'Método de pago':m.n,'Gastado (S/)':xs.reduce((a,e)=>a+Number(e.amount),0),'Gastos':xs.length})})});
   const porCat=[];months.forEach(kk=>S.cats.forEach(c=>{const v=catSpent(kk,c.id);if(v>0)porCat.push({'Mes':mLbl(kk),'Categoría':c.name,'Gastado (S/)':v,'Estimado (S/)':c.budget||''})}));
   const wb=X.utils.book_new();
   const add=(rows,name,cols,head)=>{
     const ws=rows.length?X.utils.json_to_sheet(rows):X.utils.aoa_to_sheet([head]);
     ws['!cols']=cols.map(w=>({wch:w}));
     const r=X.utils.decode_range(ws['!ref']);
-    for(let R=1;R<=r.e.r;R++)for(let C=0;C<=r.e.c;C++){const cell=ws[X.utils.encode_cell({r:R,c:C})];if(cell&&cell.t==='n')cell.z='#,##0.00'}
+    for(let R=1;R<=r.e.r;R++)for(let C=0;C<=r.e.c;C++){const cell=ws[X.utils.encode_cell({r:R,c:C})];const hd=ws[X.utils.encode_cell({r:0,c:C})];if(cell&&cell.t==='n'&&hd&&String(hd.v).includes('S/'))cell.z='#,##0.00'}
     X.utils.book_append_sheet(wb,ws,name);
   };
-  add(dia,'Día a día',[12,16,16,12,34],['Fecha','Mes','Categoría','Monto (S/)','Nota']);
-  add(fijos,'Gastos fijos',[16,24,12,11,14],['Mes','Gasto','Monto (S/)','Estado','Fecha de pago']);
+  add(dia,'Día a día',[12,16,16,12,16,34],['Fecha','Mes','Categoría','Monto (S/)','Método de pago','Nota']);
+  add(fijos,'Gastos fijos',[16,24,12,11,14,16],['Mes','Gasto','Monto (S/)','Estado','Fecha de pago','Método de pago']);
   add(res,'Resumen por mes',[16,13,17,15,13,10],['Mes','Ingreso (S/)','Gastos fijos (S/)','Día a día (S/)','Ahorro (S/)','Estado']);
   add(porCat,'Por categoría',[16,18,14,14],['Mes','Categoría','Gastado (S/)','Estimado (S/)']);
+  add(porPago,'Por método de pago',[16,18,14,10],['Mes','Método de pago','Gastado (S/)','Gastos']);
   X.writeFile(wb,'SuperFinance-Mario-'+td+'.xlsx');
 }
 document.getElementById('setBtn').onclick=openSettings;
@@ -771,7 +818,7 @@ document.getElementById('view').addEventListener('click',e=>{
     if(p[id]){delete p[id];save();render();toast('Marcado como pendiente')}
     else{
       const iso=k===realKey?todayISO():k<realKey?k+'-01':todayISO();
-      p[id]={amount:Number(f.amount),date:iso};save();render();
+      p[id]={amount:Number(f.amount),date:iso,pay:f.pay||'bcp'};save();render();
       const el=document.querySelector('[data-fx="'+id+'"]');if(el){el.classList.add('bumped')}
       const all=S.fixed.every(x=>p[x.id]);
       toast(all?'🎉 ¡Todos los fijos pagados!':'✓ '+f.name+' pagado');
@@ -844,6 +891,7 @@ const parseAmt=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinit
 
 function openEntry(catId){
   let sel=catId||S.cats[0].id;
+  let payId=PAYS.some(m=>m.id===S.lastPay)?S.lastPay:PAYS[0].id;
   const k=mKey();
   const c0=cycleOf(k),td=todayISO();
   const defDate=(td>=c0.from&&td<=c0.to)||td>c0.to?td:c0.from;
@@ -854,6 +902,8 @@ function openEntry(catId){
     <div class="pick" id="pick">${S.cats.map(c=>`<button data-c="${c.id}" style="--c:${col(c.color)}" aria-pressed="${c.id===sel}"><span class="e">${esc(c.emoji)}</span>${esc(c.name)}</button>`).join('')}</div>
     <label class="lbl" for="amtIn">¿Cuánto?</label>
     <div class="money"><span>S/</span><input id="amtIn" inputmode="decimal" placeholder="0" autocomplete="off"></div>
+    <span class="lbl">¿Cómo pagaste?</span>
+    <div class="paym" id="paym">${PAYS.map(m=>`<button type="button" data-p="${m.id}" style="--c:${col(m.color)}" aria-pressed="${m.id===payId}" aria-label="${m.name}${m.sub?' '+m.sub:''}"><span class="e">${m.e}</span><b>${m.name}</b>${m.sub?`<small>${m.sub}</small>`:''}</button>`).join('')}</div>
     <label class="lbl" for="noteIn">Nota (opcional)</label>
     <input class="field" id="noteIn" placeholder="Ej. taxi a la clínica" autocomplete="off">
     <label class="lbl" for="dateIn">Fecha</label>
@@ -866,12 +916,14 @@ function openEntry(catId){
   const dateIn=sheet.querySelector('#dateIn'),cycHint=sheet.querySelector('#cycHint');
   const showCyc=()=>{const v=dateIn.value;if(!v||v<firstDay()){cycHint.textContent='';return}const kk=keyOfDate(v);cycHint.innerHTML='💳 Este gasto cuenta para <b>'+MESES[+kk.slice(5)-1]+' '+kk.slice(0,4)+'</b>';};
   dateIn.addEventListener('change',showCyc);dateIn.addEventListener('input',showCyc);showCyc();
+  sheet.querySelector('#paym').onclick=e=>{const b=e.target.closest('[data-p]');if(!b)return;payId=b.dataset.p;sheet.querySelectorAll('#paym button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===payId))};
   sheet.querySelector('#pick').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;sel=b.dataset.c;sheet.querySelectorAll('#pick button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.c===sel))};
   saveB.onclick=()=>{
     const v=parseAmt(amt.value);if(!(v>0))return;
     const d=sheet.querySelector('#dateIn').value||defDate;
     if(d<firstDay()){toast('La app empieza con los consumos del '+dayLbl(firstDay()));return}
-    S.entries.push({id:Date.now().toString(36),cat:sel,amount:Math.round(v*100)/100,note:sheet.querySelector('#noteIn').value.trim(),date:d});
+    S.entries.push({id:Date.now().toString(36),cat:sel,amount:Math.round(v*100)/100,pay:payId,note:sheet.querySelector('#noteIn').value.trim(),date:d});
+    S.lastPay=payId;
     save();
     const dk=keyOfDate(d);const moved=dk!==mKey();if(moved){const [y,m]=dk.split('-').map(Number);viewY=y;viewM=m-1}
     closeSheet();render();
@@ -881,8 +933,8 @@ function openEntry(catId){
 }
 
 function openFixed(id){
-  const f=id?S.fixed.find(x=>x.id===id):{name:'',emoji:'📌',amount:'',color:COLORS[S.fixed.length%COLORS.length]};
-  let askDel=false;
+  const f=id?S.fixed.find(x=>x.id===id):{name:'',emoji:'📌',amount:'',color:COLORS[S.fixed.length%COLORS.length],pay:'bcp'};
+  let askDel=false,fxPay=PAYS.some(m=>m.id===f.pay)?f.pay:'bcp';
   const draw=()=>{
     openSheetInner(`
     <div class="sh-head"><div><p class="eyebrow">Gasto fijo</p><h2 id="shTitle">${id?'Cambiar '+esc(f.name):'Nuevo gasto fijo'}</h2></div>${closeBtn}</div>
@@ -892,16 +944,19 @@ function openFixed(id){
     <label class="lbl" for="fxAmt">Monto mensual</label>
     <div class="money"><span>S/</span><input id="fxAmt" inputmode="decimal" value="${f.amount}" placeholder="0" autocomplete="off"></div>
     ${id?'<p class="hint" style="margin-top:10px">El nuevo monto se usa desde ahora. Lo ya pagado no cambia.</p>':''}
+    <span class="lbl">¿Cómo lo pagas?</span>
+    <div class="paym" id="fxPaym">${PAYS.map(m=>`<button type="button" data-p="${m.id}" style="--c:${col(m.color)}" aria-pressed="${m.id===fxPay}" aria-label="${m.name}${m.sub?' '+m.sub:''}"><span class="e">${m.e}</span><b>${m.name}</b>${m.sub?`<small>${m.sub}</small>`:''}</button>`).join('')}</div>
     <div class="sh-actions">
       <button class="btn primary" id="fxSave">${checkSvg}Guardar</button>
       ${id?(askDel?`<div class="inline-confirm"><span>¿Quitar “${esc(f.name)}” de tus gastos fijos?</span><button class="btn sm danger" id="fxDelYes">Sí, quitar</button><button class="btn sm ghost" id="fxDelNo">No</button></div>`:'<button class="btn danger" id="fxDel">Quitar este gasto fijo</button>'):''}
     </div>`);
     sheet.querySelector('[data-close]').onclick=closeSheet;
+    sheet.querySelector('#fxPaym').onclick=e=>{const b=e.target.closest('[data-p]');if(!b)return;fxPay=b.dataset.p;sheet.querySelectorAll('#fxPaym button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.p===fxPay))};
     sheet.querySelector('#fxSave').onclick=()=>{
       const name=sheet.querySelector('#fxName').value.trim(),amount=parseAmt(sheet.querySelector('#fxAmt').value),emoji=sheet.querySelector('#fxEmo').dataset.v||'📌';
       if(!name){sheet.querySelector('#fxName').focus();toast('Escribe un nombre');return}
-      if(id){Object.assign(f,{name,amount,emoji})}
-      else S.fixed.push({id:'f'+Date.now().toString(36),name,emoji,amount,color:f.color});
+      if(id){Object.assign(f,{name,amount,emoji,pay:fxPay});const pd=(S.paid[mKey()]||{})[id];if(pd)pd.pay=fxPay}
+      else S.fixed.push({id:'f'+Date.now().toString(36),name,emoji,amount,color:f.color,pay:fxPay});
       save();closeSheet();render();toast('✓ Guardado');
     };
     const d=sheet.querySelector('#fxDel');if(d)d.onclick=()=>{askDel=true;draw()};
