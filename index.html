@@ -215,6 +215,9 @@ button.bill:hover,button.bill:focus-visible{background:var(--surface);border-col
 .moves .r{display:flex;align-items:center;gap:6px}
 .moves .r b{font-family:var(--display);font-size:22px;font-weight:800;font-stretch:82%;font-variant-numeric:tabular-nums;white-space:nowrap}
 .trash{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--muted)}
+.trash.ed{color:var(--accent)}
+.moves .r{gap:2px}
+.mv-b{display:block;min-width:0;text-align:left;width:100%}
 .trash svg{width:19px;height:19px}
 .confirm{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-radius:14px;background:var(--bad-soft);font-size:15px;font-weight:600}
 .confirm span{flex:1;min-width:140px}
@@ -663,8 +666,8 @@ function renderVariables(){
   ${ents.length?`<ul class="moves">${ents.map(e=>{const c=catOf(e.cat);return `
     <li>
       <span class="coin sm" style="--c:${col(c.color)}" aria-hidden="true">${esc(c.emoji)}</span>
-      <div style="min-width:0"><div class="nm">${esc(c.name)}</div><div class="d">${payOfEntry(e)?`<span class="pm">${payOfEntry(e)}</span> `:''}${dayLbl(e.date)}${e.note?' · '+esc(e.note):''}</div></div>
-      <div class="r"><b>${money(e.amount)}</b><button class="trash" data-del="${e.id}" aria-label="Borrar gasto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg></button></div>
+      <button class="mv-b" data-editent="${e.id}" aria-label="Editar gasto de ${esc(c.name)}"><div class="nm">${esc(c.name)}</div><div class="d">${payOfEntry(e)?`<span class="pm">${payOfEntry(e)}</span> `:''}${dayLbl(e.date)}${e.note?' · '+esc(e.note):''}</div></button>
+      <div class="r"><b>${money(e.amount)}</b><button class="trash ed" data-editent="${e.id}" aria-label="Editar gasto">${penSvg}</button><button class="trash" data-del="${e.id}" aria-label="Borrar gasto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg></button></div>
       ${confirmDel===e.id?`<div class="confirm"><span>¿Borrar este gasto de ${money(e.amount)}?</span><button class="btn sm danger" data-delyes="${e.id}">Sí, borrar</button><button class="btn sm ghost" data-delno>No</button></div>`:''}
     </li>`}).join('')}</ul>`
   :`<div class="empty"><span class="big">🧾</span><b style="color:var(--ink)">Todavía no hay gastos este mes</b><span>Toca una categoría o “Anotar un gasto” para empezar.</span></div>`}`;
@@ -832,6 +835,7 @@ document.getElementById('view').addEventListener('click',e=>{
   if(b.id==='addCat'){openCat(null);return}
   if(b.dataset.editcat){openCat(b.dataset.editcat);return}
   if(b.dataset.cat){openEntry(b.dataset.cat);return}
+  if(b.dataset.editent){confirmDel=null;openEntry(null,b.dataset.editent);return}
   if(b.dataset.del){confirmDel=b.dataset.del;render();return}
   if('delno' in b.dataset){confirmDel=null;render();return}
   if(b.dataset.delyes){S.entries=S.entries.filter(x=>x.id!==b.dataset.delyes);confirmDel=null;save();render();toast('Gasto borrado');return}
@@ -889,27 +893,33 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.hidden)close
 const closeBtn='<button class="icon-btn" data-close aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
 const parseAmt=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:0};
 
-function openEntry(catId){
-  let sel=catId||S.cats[0].id;
-  let payId=PAYS.some(m=>m.id===S.lastPay)?S.lastPay:PAYS[0].id;
+function openEntry(catId,entryId){
+  const ed=entryId?S.entries.find(x=>x.id===entryId):null;
+  let askDel=false;
+  let sel=ed?ed.cat:(catId||S.cats[0].id);
+  let payId=ed?(ed.pay||''):(PAYS.some(m=>m.id===S.lastPay)?S.lastPay:PAYS[0].id);
   const k=mKey();
   const c0=cycleOf(k),td=todayISO();
   const defDate=(td>=c0.from&&td<=c0.to)||td>c0.to?td:c0.from;
-  const dd=defDate<firstDay()?firstDay():defDate;
+  const dd=ed?ed.date:(defDate<firstDay()?firstDay():defDate);
   openSheet(`
-    <div class="sh-head"><div><p class="eyebrow">Día a día</p><h2 id="shTitle">Anotar gasto</h2></div>${closeBtn}</div>
+    <div class="sh-head"><div><p class="eyebrow">Día a día</p><h2 id="shTitle">${ed?'Editar gasto':'Anotar gasto'}</h2></div>${closeBtn}</div>
     <span class="lbl">¿En qué fue?</span>
     <div class="pick" id="pick">${S.cats.map(c=>`<button data-c="${c.id}" style="--c:${col(c.color)}" aria-pressed="${c.id===sel}"><span class="e">${esc(c.emoji)}</span>${esc(c.name)}</button>`).join('')}</div>
     <label class="lbl" for="amtIn">¿Cuánto?</label>
-    <div class="money"><span>S/</span><input id="amtIn" inputmode="decimal" placeholder="0" autocomplete="off"></div>
+    <div class="money"><span>S/</span><input id="amtIn" inputmode="decimal" placeholder="0" autocomplete="off" value="${ed?ed.amount:''}"></div>
     <span class="lbl">¿Cómo pagaste?</span>
     <div class="paym" id="paym">${PAYS.map(m=>`<button type="button" data-p="${m.id}" style="--c:${col(m.color)}" aria-pressed="${m.id===payId}" aria-label="${m.name}${m.sub?' '+m.sub:''}"><span class="e">${m.e}</span><b>${m.name}</b>${m.sub?`<small>${m.sub}</small>`:''}</button>`).join('')}</div>
     <label class="lbl" for="noteIn">Nota (opcional)</label>
-    <input class="field" id="noteIn" placeholder="Ej. taxi a la clínica" autocomplete="off">
+    <input class="field" id="noteIn" placeholder="Ej. taxi a la clínica" autocomplete="off" value="${ed?esc(ed.note||''):''}">
     <label class="lbl" for="dateIn">Fecha</label>
     <input class="field" id="dateIn" type="date" min="${firstDay()}" value="${dd}">
     <p class="hint" id="cycHint" style="margin-top:8px"></p>
-    <div class="sh-actions"><button class="btn primary" id="saveEntry" disabled>${checkSvg}Guardar gasto</button></div>`);
+    <div class="sh-actions"><button class="btn primary" id="saveEntry" ${ed?'':'disabled'}>${checkSvg}${ed?'Guardar cambios':'Guardar gasto'}</button>${ed?'<div id="delBox"><button class="btn danger" id="entDel">Borrar este gasto</button></div>':''}</div>`);
+  if(ed){const box=sheet.querySelector('#delBox');box.onclick=e=>{const t=e.target.closest('button');if(!t)return;
+    if(t.id==='entDel'){box.innerHTML=`<div class="inline-confirm"><span>¿Borrar este gasto de ${money(ed.amount)}?</span><button class="btn sm danger" id="entDelYes">Sí, borrar</button><button class="btn sm ghost" id="entDelNo">No</button></div>`}
+    else if(t.id==='entDelNo'){box.innerHTML='<button class="btn danger" id="entDel">Borrar este gasto</button>'}
+    else if(t.id==='entDelYes'){S.entries=S.entries.filter(x=>x.id!==ed.id);save();closeSheet();render();toast('Gasto borrado')}}}
   const amt=sheet.querySelector('#amtIn'),saveB=sheet.querySelector('#saveEntry');
   const sync=()=>{saveB.disabled=!(parseAmt(amt.value)>0)};
   amt.oninput=sync;
@@ -922,12 +932,14 @@ function openEntry(catId){
     const v=parseAmt(amt.value);if(!(v>0))return;
     const d=sheet.querySelector('#dateIn').value||defDate;
     if(d<firstDay()){toast('La app empieza con los consumos del '+dayLbl(firstDay()));return}
-    S.entries.push({id:Date.now().toString(36),cat:sel,amount:Math.round(v*100)/100,pay:payId,note:sheet.querySelector('#noteIn').value.trim(),date:d});
-    S.lastPay=payId;
+    const data={cat:sel,amount:Math.round(v*100)/100,note:sheet.querySelector('#noteIn').value.trim(),date:d};
+    if(payId)data.pay=payId;
+    if(ed){Object.assign(ed,data)}
+    else{S.entries.push({id:Date.now().toString(36),...data});S.lastPay=payId}
     save();
     const dk=keyOfDate(d);const moved=dk!==mKey();if(moved){const [y,m]=dk.split('-').map(Number);viewY=y;viewM=m-1}
     closeSheet();render();
-    const c=S.cats.find(x=>x.id===sel);toast('✓ '+money(v)+' en '+c.name+(moved?' · cuenta para '+MESES[viewM]:''));
+    const c=S.cats.find(x=>x.id===sel)||{name:'Otros'};toast((ed?'✓ Gasto actualizado':'✓ '+money(v)+' en '+c.name)+(moved?' · cuenta para '+MESES[viewM]:''));
   };
   sheet.querySelector('[data-close]').onclick=closeSheet;
 }
