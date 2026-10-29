@@ -328,6 +328,10 @@ html.lock,html.lock body{overflow:hidden;overscroll-behavior:none}
 .emogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:6px;margin-top:10px;padding:10px;border-radius:16px;background:var(--surface-2);border:1px solid var(--line);max-height:244px;overflow-y:auto;overscroll-behavior:contain}
 .emogrid button{height:48px;border-radius:12px;font-size:26px;line-height:1;display:grid;place-items:center}
 .emogrid button[aria-pressed="true"]{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent)}
+.field.note{background:var(--surface);border:2px solid var(--line)}
+.field.note:focus{border-color:var(--accent);outline:none}
+.field.note.bad{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+#noteWarn{color:var(--bad);margin-top:8px}
 .emo-hint{font-size:13.5px;color:var(--muted);margin:6px 2px 0}
 .sh-actions{display:grid;gap:10px;margin-top:22px}
 .inline-confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px;border-radius:16px;background:var(--bad-soft);font-size:15px;font-weight:600}
@@ -953,8 +957,9 @@ function openEntry(catId,entryId){
     <div class="money"><span>S/</span><input id="amtIn" inputmode="decimal" placeholder="0" autocomplete="off" value="${ed?ed.amount:''}"></div>
     <span class="lbl">¿Cómo pagaste?</span>
     <div class="paym" id="paym">${PAYS.map(m=>`<button type="button" data-p="${m.id}" style="--c:${col(m.color)}" aria-pressed="${m.id===payId}" aria-label="${m.name}${m.sub?' '+m.sub:''}"><span class="e">${m.e}</span><b>${m.name}</b>${m.sub?`<small>${m.sub}</small>`:''}</button>`).join('')}</div>
-    <label class="lbl" for="noteIn">Nota (opcional)</label>
-    <input class="field" id="noteIn" placeholder="Ej. taxi a la clínica" autocomplete="off" value="${ed?esc(ed.note||''):''}">
+    <label class="lbl" for="noteIn">Nota</label>
+    <input class="field note" id="noteIn" placeholder="Ej. taxi a la clínica" autocomplete="off" value="${ed?esc(ed.note||''):''}">
+    <p class="warn" id="noteWarn" hidden>⚠️ Falta la nota. Escribe en qué fue el gasto para poder guardarlo.</p>
     <label class="lbl" for="dateIn">Fecha</label>
     <input class="field" id="dateIn" type="date" min="${firstDay()}" value="${dd}">
     <p class="hint" id="cycHint" style="margin-top:8px"></p>
@@ -964,8 +969,12 @@ function openEntry(catId,entryId){
     else if(t.id==='entDelNo'){box.innerHTML='<button class="btn danger" id="entDel">Borrar este gasto</button>'}
     else if(t.id==='entDelYes'){tombAdd('e:'+ed.id);S.entries=S.entries.filter(x=>x.id!==ed.id);save();closeSheet();render();toast('Gasto borrado')}}}
   const amt=sheet.querySelector('#amtIn'),saveB=sheet.querySelector('#saveEntry');
+  const noteIn=sheet.querySelector('#noteIn');
+  /* el gasto solo se puede guardar con monto y nota */
+  const noteWarn=sheet.querySelector('#noteWarn');
   const sync=()=>{saveB.disabled=!(parseAmt(amt.value)>0)};
-  amt.oninput=sync;
+  amt.oninput=sync;sync();
+  noteIn.oninput=()=>{if(noteIn.value.trim()){noteWarn.hidden=true;noteIn.classList.remove('bad')}};
   const dateIn=sheet.querySelector('#dateIn'),cycHint=sheet.querySelector('#cycHint');
   const showCyc=()=>{const v=dateIn.value;if(!v||v<firstDay()){cycHint.textContent='';return}const kk=keyOfDate(v);cycHint.innerHTML='💳 Este gasto cuenta para <b>'+MESES[+kk.slice(5)-1]+' '+kk.slice(0,4)+'</b>';};
   dateIn.addEventListener('change',showCyc);dateIn.addEventListener('input',showCyc);showCyc();
@@ -973,6 +982,7 @@ function openEntry(catId,entryId){
   sheet.querySelector('#pick').onclick=e=>{const b=e.target.closest('[data-c]');if(!b)return;sel=b.dataset.c;sheet.querySelectorAll('#pick button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.c===sel))};
   saveB.onclick=()=>{
     const v=parseAmt(amt.value);if(!(v>0))return;
+    if(!noteIn.value.trim()){noteWarn.hidden=false;noteIn.classList.add('bad');noteIn.focus();return}
     const d=sheet.querySelector('#dateIn').value||defDate;
     if(d<firstDay()){toast('La app empieza con los consumos del '+dayLbl(firstDay()));return}
     const data={cat:sel,amount:Math.round(v*100)/100,note:sheet.querySelector('#noteIn').value.trim(),date:d};
